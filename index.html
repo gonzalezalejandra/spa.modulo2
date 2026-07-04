@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Administrador de Prompts — Herramienta ABM para gestionar tu biblioteca de prompts conectada a Google Sheets." />
+  <title>PromptManager — Administrador de Prompts</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- ── HEADER ─────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-inner">
+
+      <a class="header-brand" href="#" id="brandLink" aria-label="Inicio">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-text">
+          <span class="brand-title">PromptManager</span>
+          <span class="brand-subtitle">Administrador ABM</span>
+        </div>
+      </a>
+
+      <div class="header-spacer"></div>
+
+      <!-- Stats -->
+      <div class="header-stats" id="headerStats">
+        <div class="stat-chip">
+          <span class="stat-value" id="statTotal">—</span>
+          <span class="stat-label">Prompts</span>
+        </div>
+        <div class="stat-chip">
+          <span class="stat-value" id="statCategories">—</span>
+          <span class="stat-label">Categorías</span>
+        </div>
+      </div>
+
+      <!-- Configurar Conexión -->
+      <button class="theme-toggle" id="configToggleBtn" title="Configurar conexión" aria-label="Configurar conexión de Apps Script">
+        ⚙️
+      </button>
+
+      <!-- Theme Toggle -->
+      <button class="theme-toggle" id="themeToggle" title="Cambiar tema" aria-label="Cambiar modo oscuro/claro">
+        <span class="icon-sun">☀️</span>
+        <span class="icon-moon">🌙</span>
+      </button>
+
+    </div>
+  </header>
+
+  <!-- ── MAIN ───────────────────────────────────────────────── -->
+  <main class="app-main">
+
+    <!-- Banner de configuración de URL -->
+    <div class="config-banner" id="configBanner">
+      <div class="config-banner-icon">🔗</div>
+      <div class="config-banner-text">
+        <div class="config-banner-title">Configurar conexión con Google Apps Script</div>
+        <div class="config-banner-desc">
+          Pegá la URL del Web App de tu Google Apps Script para conectar con Google Sheets.
+          Desplegá el script como Web App (acceso: cualquier persona, incluso anónima) y copiá la URL aquí.
+        </div>
+        <div class="config-url-input-wrapper">
+          <input
+            type="url"
+            id="appsScriptUrl"
+            placeholder="https://script.google.com/macros/s/XXXXX/exec"
+            aria-label="URL del Apps Script Web App"
+          />
+          <button class="btn btn-primary" id="saveConfigBtn">
+            💾 Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input
+          type="search"
+          id="searchInput"
+          placeholder="Buscar por nombre, categoría o contenido..."
+          aria-label="Buscar prompts"
+        />
+      </div>
+
+      <select id="categoryFilter" aria-label="Filtrar por categoría">
+        <option value="">📂 Todas las categorías</option>
+      </select>
+
+      <button class="btn btn-primary" id="newPromptBtn">
+        ✨ Nuevo Prompt
+      </button>
+    </div>
+
+    <!-- Tabla de Prompts -->
+    <section class="table-section" aria-label="Lista de prompts">
+
+      <div class="table-header-bar">
+        <h1 class="table-title">Biblioteca de Prompts</h1>
+        <span class="results-count" id="resultsCount">0 resultados</span>
+      </div>
+
+      <div class="table-responsive">
+        <table id="promptsTable" aria-label="Tabla de prompts">
+          <thead>
+            <tr>
+              <th data-col="categoria" aria-sort="none">
+                Categoría <span class="sort-icon">▲</span>
+              </th>
+              <th data-col="nombrePrompt" aria-sort="none">
+                Nombre Prompt <span class="sort-icon">▲</span>
+              </th>
+              <th data-col="prompt" aria-sort="none">
+                Prompt <span class="sort-icon">▲</span>
+              </th>
+              <th data-col="ejemplos" aria-sort="none">
+                Ejemplos <span class="sort-icon">▲</span>
+              </th>
+              <th data-col="fecha" aria-sort="none">
+                Fecha <span class="sort-icon">▲</span>
+              </th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="promptsTbody">
+            <!-- Cargando... -->
+            <tr>
+              <td colspan="6">
+                <div class="loading-state">
+                  <div class="spinner"></div>
+                  <div class="loading-text">Cargando prompts...</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ── FOOTER ─────────────────────────────────────────────── -->
+  <footer class="app-footer">
+    PromptManager &nbsp;·&nbsp; Powered by Google Sheets + Apps Script
+  </footer>
+
+</div>
+
+<!-- ── MODAL: CREAR / EDITAR ──────────────────────────────────── -->
+<div class="modal-overlay" id="formModal" role="dialog" aria-modal="true" aria-labelledby="formModalTitle">
+  <div class="modal">
+
+    <div class="modal-header">
+      <div class="modal-icon create" id="formModalIcon">✨</div>
+      <div class="modal-header-text">
+        <div class="modal-title" id="formModalTitle">Nuevo Prompt</div>
+        <div class="modal-subtitle" id="formModalSubtitle">Completá los campos para agregar un prompt</div>
+      </div>
+      <button class="modal-close" id="formModalClose" aria-label="Cerrar modal">✕</button>
+    </div>
+
+    <form id="promptForm" novalidate>
+      <div class="modal-body">
+        <div class="form-grid">
+
+          <!-- Categoría -->
+          <div class="form-group">
+            <label for="fieldCategoria" class="form-label">
+              🏷️ Categoría <span class="label-required">*</span>
+            </label>
+            <input
+              type="text"
+              id="fieldCategoria"
+              class="form-input"
+              placeholder="Ej: Marketing, Redacción, Código..."
+              list="categoriasDatalist"
+              required
+              autocomplete="off"
+            />
+            <datalist id="categoriasDatalist"></datalist>
+            <span class="form-hint">Elegí una existente o escribí una nueva.</span>
+          </div>
+
+          <!-- Nombre Prompt -->
+          <div class="form-group">
+            <label for="fieldNombrePrompt" class="form-label">
+              📝 Nombre del Prompt <span class="label-required">*</span>
+            </label>
+            <input
+              type="text"
+              id="fieldNombrePrompt"
+              class="form-input"
+              placeholder="Ej: Resumen ejecutivo, Email de ventas..."
+              required
+              autocomplete="off"
+            />
+          </div>
+
+          <!-- Prompt -->
+          <div class="form-group">
+            <label for="fieldPrompt" class="form-label">
+              ⚡ Prompt <span class="label-required">*</span>
+            </label>
+            <textarea
+              id="fieldPrompt"
+              class="form-textarea tall"
+              placeholder="Escribí el prompt completo aquí. Podés usar variables como {{tema}}, {{tono}}, etc."
+              required
+            ></textarea>
+            <span class="char-counter"><span id="promptCharCount">0</span> caracteres</span>
+          </div>
+
+          <!-- Ejemplos -->
+          <div class="form-group">
+            <label for="fieldEjemplos" class="form-label">
+              💡 Ejemplos
+            </label>
+            <textarea
+              id="fieldEjemplos"
+              class="form-textarea"
+              placeholder="Ejemplos de uso, resultados esperados, notas adicionales..."
+            ></textarea>
+            <span class="form-hint">Opcional — útil para documentar casos de uso.</span>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="formCancelBtn">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="formSubmitBtn">
+          <span id="formSubmitIcon">✨</span>
+          <span id="formSubmitText">Crear Prompt</span>
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<!-- ── MODAL: ELIMINAR ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+  <div class="modal" style="max-width: 460px;">
+
+    <div class="modal-header">
+      <div class="modal-icon delete">🗑️</div>
+      <div class="modal-header-text">
+        <div class="modal-title" id="deleteModalTitle">Eliminar Prompt</div>
+        <div class="modal-subtitle">Esta acción no se puede deshacer</div>
+      </div>
+      <button class="modal-close" id="deleteModalClose" aria-label="Cerrar modal">✕</button>
+    </div>
+
+    <div class="modal-body delete-confirm">
+      <span class="delete-warning-icon">⚠️</span>
+      <div class="delete-confirm-title">¿Eliminar este prompt?</div>
+      <div class="delete-confirm-desc">
+        Vas a borrar permanentemente el siguiente prompt de Google Sheets.
+        Esta acción no se puede deshacer.
+      </div>
+      <div class="delete-item-card">
+        <div class="delete-item-name" id="deleteItemName">—</div>
+        <div class="delete-item-cat" id="deleteItemCat">—</div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="deleteCancelBtn">Cancelar</button>
+      <button class="btn btn-danger" id="deleteConfirmBtn">
+        🗑️ Sí, eliminar
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── MODAL: DETALLE ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
+  <div class="modal">
+
+    <div class="modal-header">
+      <div class="modal-icon create">👁️</div>
+      <div class="modal-header-text">
+        <div class="modal-title" id="detailModalTitle">Ver Prompt</div>
+        <div class="modal-subtitle" id="detailModalCategory">—</div>
+      </div>
+      <button class="modal-close" id="detailModalClose" aria-label="Cerrar modal">✕</button>
+    </div>
+
+    <div class="modal-body detail-modal-body">
+      <div class="detail-section">
+        <div class="detail-label">⚡ Prompt</div>
+        <div class="detail-value" id="detailPromptText">—</div>
+      </div>
+      <div class="detail-section" id="detailEjemplosSection">
+        <div class="detail-label">💡 Ejemplos</div>
+        <div class="detail-value" id="detailEjemplosText">—</div>
+      </div>
+      <div class="detail-section" id="detailFechaSection">
+        <div class="detail-label">📅 Fecha de creación</div>
+        <div class="detail-value" id="detailFechaText">—</div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="detailCloseBtn">Cerrar</button>
+      <button class="btn btn-primary" id="detailEditBtn">✏️ Editar este prompt</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── TOAST CONTAINER ────────────────────────────────────────── -->
+<div id="toastContainer" aria-live="polite" aria-label="Notificaciones"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
